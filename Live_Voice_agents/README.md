@@ -61,6 +61,19 @@ python lull_agent.py --text
 python lull_agent.py
 ```
 
+## Desktop App (Live Screen + Voice)
+
+Run the desktop GUI for true live screen capture and voice input:
+
+```bash
+python desktop_app.py
+```
+
+Notes:
+- Uses your active desktop screen directly (no screenshot uploads).
+- Uses microphone input. For offline speech, set `VOSK_MODEL_PATH`.
+- If no Vosk model is set, it falls back to Google Web Speech (no API key).
+
 ## Web App (Streamlit)
 
 This repo includes a web deployment at `Live_Voice_agents/streamlit_app.py`.
