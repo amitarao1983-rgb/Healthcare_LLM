@@ -77,8 +77,15 @@ class Speaker:
 
 
 class Listener:
-    def __init__(self, use_text_input: bool = False) -> None:
+    def __init__(
+        self,
+        use_text_input: bool = False,
+        allow_text_fallback: bool = True,
+        allow_cloud_fallback: bool = False,
+    ) -> None:
         self.use_text_input = use_text_input
+        self.allow_text_fallback = allow_text_fallback
+        self.allow_cloud_fallback = allow_cloud_fallback
         self._sr = None
         self._recognizer = None
         self._vosk_model = None
@@ -109,26 +116,38 @@ class Listener:
 
     def listen(self) -> str:
         if self.use_text_input or self._recognizer is None or self._sr is None:
+            if not self.allow_text_fallback:
+                return ""
             try:
                 return input("You: ").strip()
             except EOFError:
                 return ""
 
-        if self._vosk_model is None:
+        if self._vosk_model is None and not self.allow_cloud_fallback:
             if not self._warned_no_vosk:
                 print("Vosk model not set. Use --text or set VOSK_MODEL_PATH.")
                 self._warned_no_vosk = True
+            if not self.allow_text_fallback:
+                return ""
             try:
                 return input("You: ").strip()
             except EOFError:
                 return ""
 
-        with self._sr.Microphone() as source:
-            self._recognizer.adjust_for_ambient_noise(source, duration=0.5)
-            audio = self._recognizer.listen(source, timeout=5, phrase_time_limit=10)
+        try:
+            with self._sr.Microphone() as source:
+                self._recognizer.adjust_for_ambient_noise(source, duration=0.5)
+                audio = self._recognizer.listen(source, timeout=5, phrase_time_limit=10)
+        except Exception:
+            return ""
 
         try:
-            text = self._recognizer.recognize_vosk(audio, self._vosk_model)
+            if self._vosk_model is not None:
+                text = self._recognizer.recognize_vosk(audio, self._vosk_model)
+            elif self.allow_cloud_fallback:
+                text = self._recognizer.recognize_google(audio)
+            else:
+                return ""
         except Exception:
             return ""
         return text.strip()
@@ -350,9 +369,18 @@ class Vision:
 
 
 class LullAgent:
-    def __init__(self, use_text_input: bool = False) -> None:
+    def __init__(
+        self,
+        use_text_input: bool = False,
+        allow_text_fallback: bool = True,
+        allow_cloud_fallback: bool = False,
+    ) -> None:
         self.speaker = Speaker()
-        self.listener = Listener(use_text_input=use_text_input)
+        self.listener = Listener(
+            use_text_input=use_text_input,
+            allow_text_fallback=allow_text_fallback,
+            allow_cloud_fallback=allow_cloud_fallback,
+        )
         self.screen_reader = ScreenReader()
         self.screen_qa = ScreenQnA()
         self.translator = Translator()
