@@ -311,6 +311,11 @@ class Vision:
         if not success:
             return [], "Unable to read from the camera."
 
+        return self.detect_objects_in_frame(frame)
+
+    def detect_objects_in_frame(self, frame) -> Tuple[List[str], Optional[str]]:
+        if frame is None:
+            return [], "No image was provided."
         try:
             labels = self._detect_with_yolo(frame)
             return labels, None

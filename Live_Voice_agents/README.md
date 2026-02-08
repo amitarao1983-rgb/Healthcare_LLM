@@ -61,6 +61,25 @@ python lull_agent.py --text
 python lull_agent.py
 ```
 
+## Web App (Streamlit)
+
+This repo includes a web deployment at `Live_Voice_agents/streamlit_app.py`.
+
+Limitations:
+- Browsers cannot read your full laptop screen directly. Upload a screenshot for OCR.
+- Voice input/output is not enabled in the web app; use the local app for voice.
+
+Run locally:
+
+```bash
+pip install -r ../requirements.txt
+streamlit run streamlit_app.py
+```
+
+Deploy on Streamlit Community Cloud:
+- App file: `Live_Voice_agents/streamlit_app.py`
+- System packages: `tesseract-ocr` (see `packages.txt`)
+
 ## Example Commands
 
 - "Hi Lull"
