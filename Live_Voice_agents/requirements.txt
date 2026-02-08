@@ -1,0 +1,11 @@
+pyttsx3
+SpeechRecognition
+vosk
+mss
+pillow
+pytesseract
+opencv-python
+ultralytics
+requests
+numpy
+pyaudio
