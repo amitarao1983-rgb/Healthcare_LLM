@@ -155,7 +155,7 @@ def next_id(prefix: str, counter_key: str) -> str:
     return f"{prefix}-{counter_value:03d}"
 
 
-def render_training_list(trainings: list, today: date) -> None:
+def render_training_list(trainings: list, today: date, key_prefix: str) -> None:
     if not trainings:
         st.info("No trainings match the selected filters.")
         return
@@ -177,7 +177,7 @@ def render_training_list(trainings: list, today: date) -> None:
             completed = cols[0].checkbox(
                 "",
                 value=training["completed"],
-                key=f"training_done_{training['id']}",
+                key=f"{key_prefix}_training_done_{training['id']}",
             )
             if completed != training["completed"]:
                 training["completed"] = completed
@@ -378,13 +378,13 @@ with tab_trainings:
 
     status_tabs = st.tabs(["Upcoming", "Ongoing", "Completed", "All"])
     with status_tabs[0]:
-        render_training_list(upcoming_trainings, today)
+        render_training_list(upcoming_trainings, today, "upcoming")
     with status_tabs[1]:
-        render_training_list(ongoing_trainings, today)
+        render_training_list(ongoing_trainings, today, "ongoing")
     with status_tabs[2]:
-        render_training_list(completed_trainings, today)
+        render_training_list(completed_trainings, today, "completed")
     with status_tabs[3]:
-        render_training_list(trainings_in_year, today)
+        render_training_list(trainings_in_year, today, "all")
 
 with tab_tasks:
     st.subheader(f"Daily Nursing Tasks - {task_date_filter.strftime('%b %d, %Y')}")
