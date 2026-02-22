@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import os
 import queue
 import threading
 import tkinter as tk
@@ -40,6 +41,7 @@ class DesktopApp:
         self.camera_cap: Optional["cv2.VideoCapture"] = None
         self.latest_frame = None
         self.preview_image = None
+        self.camera_error_shown = False
 
         self._build_ui()
         self.root.protocol("WM_DELETE_WINDOW", self.on_close)
@@ -266,7 +268,8 @@ class DesktopApp:
             )
             return
         index = int(self.camera_index.get())
-        self.camera_cap = cv2.VideoCapture(index)
+        self.camera_error_shown = False
+        self.camera_cap = self._open_camera(index)
         if not self.camera_cap.isOpened():
             self.camera_cap.release()
             self.camera_cap = None
@@ -275,6 +278,22 @@ class DesktopApp:
         self.camera_running = True
         self.camera_status_var.set("Camera: On")
         self._update_camera_preview()
+
+    def _open_camera(self, index: int):
+        backend_env = os.getenv("CAMERA_BACKEND", "").strip().upper()
+        backend = None
+        if backend_env == "DSHOW":
+            backend = cv2.CAP_DSHOW
+        elif backend_env == "MSMF":
+            backend = cv2.CAP_MSMF
+        elif backend_env == "DEFAULT":
+            backend = None
+        elif os.name == "nt":
+            backend = cv2.CAP_DSHOW
+
+        if backend is None:
+            return cv2.VideoCapture(index)
+        return cv2.VideoCapture(index, backend)
 
     def stop_camera(self) -> None:
         self.camera_running = False
@@ -288,22 +307,33 @@ class DesktopApp:
         if not self.camera_running or self.camera_cap is None:
             return
         success, frame = self.camera_cap.read()
-        if success:
-            self.latest_frame = frame
-            if Image is not None and ImageTk is not None:
-                rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                image = Image.fromarray(rgb)
-                max_width = 640
-                max_height = 360
-                width, height = image.size
-                scale = min(max_width / width, max_height / height, 1.0)
-                if scale < 1.0:
-                    image = image.resize(
-                        (int(width * scale), int(height * scale)),
-                        Image.BILINEAR,
-                    )
-                self.preview_image = ImageTk.PhotoImage(image)
-                self.preview_label.configure(image=self.preview_image, text="")
+        if not success:
+            if not self.camera_error_shown:
+                self.camera_status_var.set("Camera: Frame error")
+                self._append_message(
+                    AGENT_NAME,
+                    "Camera frame grab failed. Try camera index 1 or 2, or set "
+                    "CAMERA_BACKEND=DSHOW on Windows.",
+                )
+                self.camera_error_shown = True
+            self.root.after(200, self._update_camera_preview)
+            return
+
+        self.latest_frame = frame
+        if Image is not None and ImageTk is not None:
+            rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            image = Image.fromarray(rgb)
+            max_width = 640
+            max_height = 360
+            width, height = image.size
+            scale = min(max_width / width, max_height / height, 1.0)
+            if scale < 1.0:
+                image = image.resize(
+                    (int(width * scale), int(height * scale)),
+                    Image.BILINEAR,
+                )
+            self.preview_image = ImageTk.PhotoImage(image)
+            self.preview_label.configure(image=self.preview_image, text="")
         self.root.after(30, self._update_camera_preview)
 
     def on_close(self) -> None:

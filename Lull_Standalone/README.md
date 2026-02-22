@@ -78,6 +78,7 @@ Notes:
 - If no Vosk model is set, it falls back to Google Web Speech (no API key).
 - Use the "Start Camera" button to preview and ensure the camera is visible.
 - If the preview is blank, try another camera index (0, 1, 2).
+- On Windows, if you see MSMF frame errors, set `CAMERA_BACKEND=DSHOW`.
 - Object detection is trained on common objects (COCO). It may not detect hands.
 - Try a phone, bottle, cup, or laptop for quick testing.
 
