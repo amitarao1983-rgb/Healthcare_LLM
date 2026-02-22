@@ -380,6 +380,7 @@ class Vision:
     def __init__(self) -> None:
         self._cv2 = None
         self._model = None
+        self.last_detections: List[Tuple[str, float]] = []
         try:
             import cv2
 
@@ -418,22 +419,45 @@ class Vision:
             model_name = os.getenv("YOLO_MODEL_NAME", "yolov8n.pt")
             self._model = YOLO(model_name)
 
-        results = self._model(frame, verbose=False)
+        conf_env = os.getenv("YOLO_CONFIDENCE", "0.2")
+        try:
+            conf = float(conf_env)
+        except ValueError:
+            conf = 0.2
+        conf = max(0.05, min(conf, 0.9))
+
+        imgsz_env = os.getenv("YOLO_IMAGE_SIZE", "640")
+        try:
+            imgsz = int(imgsz_env)
+        except ValueError:
+            imgsz = 640
+
+        results = self._model(frame, verbose=False, conf=conf, imgsz=imgsz)
         if not results:
             return []
 
         result = results[0]
         names = result.names or {}
         labels = []
+        self.last_detections = []
 
         if hasattr(result, "boxes") and result.boxes is not None:
-            for cls_id in result.boxes.cls.tolist():
+            cls_list = result.boxes.cls.tolist()
+            conf_list = (
+                result.boxes.conf.tolist()
+                if hasattr(result.boxes, "conf")
+                else [None] * len(cls_list)
+            )
+            for cls_id, conf_value in zip(cls_list, conf_list):
                 idx = int(cls_id)
                 if isinstance(names, dict):
                     label = names.get(idx, str(idx))
                 else:
                     label = names[idx] if idx < len(names) else str(idx)
                 labels.append(label)
+                if conf_value is None:
+                    conf_value = 0.0
+                self.last_detections.append((label, float(conf_value)))
 
         return dedupe_preserve_order(labels)
 

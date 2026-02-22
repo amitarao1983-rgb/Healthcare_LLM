@@ -106,6 +106,12 @@ class DesktopApp:
             command=self.stop_camera,
             width=15,
         ).pack(side=tk.LEFT, padx=4)
+        tk.Button(
+            camera_frame,
+            text="Detect Objects",
+            command=self.detect_objects_now,
+            width=15,
+        ).pack(side=tk.LEFT, padx=4)
 
         tk.Label(
             self.root,
@@ -230,8 +236,26 @@ class DesktopApp:
                 return f"{error} Start Camera to preview and try again."
             return error
         if not labels:
-            return "I could not identify any objects."
+            return (
+                "I could not identify any objects. Try brighter light, move the "
+                "object closer, or use a common object like a phone, bottle, or cup."
+            )
+        details = self._format_detections()
+        if details:
+            return f"I see: {', '.join(labels)}. ({details})"
         return f"I see: {', '.join(labels)}."
+
+    def _format_detections(self) -> str:
+        detections = self.agent.vision.last_detections
+        if not detections:
+            return ""
+        top = detections[:3]
+        return ", ".join(f"{label} {conf:.2f}" for label, conf in top)
+
+    def detect_objects_now(self) -> None:
+        response = self._handle_object_request()
+        self._append_message(AGENT_NAME, response)
+        self.agent.speaker.speak_async(response)
 
     def start_camera(self) -> None:
         if self.camera_running:

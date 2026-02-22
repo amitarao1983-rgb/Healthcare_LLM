@@ -78,6 +78,8 @@ Notes:
 - If no Vosk model is set, it falls back to Google Web Speech (no API key).
 - Use the "Start Camera" button to preview and ensure the camera is visible.
 - If the preview is blank, try another camera index (0, 1, 2).
+- Object detection is trained on common objects (COCO). It may not detect hands.
+- Try a phone, bottle, cup, or laptop for quick testing.
 
 ## Web App (Streamlit)
 
@@ -112,6 +114,8 @@ LibreTranslate public endpoint is used by default:
 - `LIBRETRANSLATE_ENDPOINT` (default: `https://libretranslate.de/translate`)
 - `LIBRETRANSLATE_ENDPOINTS` (optional comma-separated list)
 - `LIBRETRANSLATE_API_KEY` (optional)
+- `YOLO_CONFIDENCE` (optional, default 0.2)
+- `YOLO_IMAGE_SIZE` (optional, default 640)
 
 No API key is required to run the default setup. If a public endpoint is down,
 set `LIBRETRANSLATE_ENDPOINTS` to a list of working endpoints, for example:
