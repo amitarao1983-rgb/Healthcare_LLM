@@ -18,6 +18,10 @@ SUPPORTED_LANGS = {
 }
 
 DEFAULT_TRANSLATE_ENDPOINT = "https://libretranslate.de/translate"
+DEFAULT_TRANSLATE_FALLBACKS = [
+    "https://translate.argosopentech.com/translate",
+    "https://translate.astian.org/translate",
+]
 
 
 def normalize_whitespace(text: str) -> str:
@@ -276,8 +280,21 @@ class ScreenQnA:
 
 class Translator:
     def __init__(self) -> None:
-        self.endpoint = os.getenv("LIBRETRANSLATE_ENDPOINT", DEFAULT_TRANSLATE_ENDPOINT)
+        self.endpoints = self._load_endpoints()
         self.api_key = os.getenv("LIBRETRANSLATE_API_KEY", "").strip()
+
+    def _load_endpoints(self) -> List[str]:
+        endpoints_env = os.getenv("LIBRETRANSLATE_ENDPOINTS", "").strip()
+        if endpoints_env:
+            endpoints = [item.strip() for item in endpoints_env.split(",") if item.strip()]
+            return dedupe_preserve_order(endpoints)
+
+        primary = os.getenv("LIBRETRANSLATE_ENDPOINT", DEFAULT_TRANSLATE_ENDPOINT).strip()
+        endpoints = [primary] if primary else []
+        for fallback in DEFAULT_TRANSLATE_FALLBACKS:
+            if fallback not in endpoints:
+                endpoints.append(fallback)
+        return dedupe_preserve_order(endpoints)
 
     def translate(self, text: str, target_language: str) -> str:
         if not text:
@@ -295,15 +312,37 @@ class Translator:
         if self.api_key:
             payload["api_key"] = self.api_key
 
-        try:
-            response = requests.post(self.endpoint, json=payload, timeout=10)
-            response.raise_for_status()
-            translated = response.json().get("translatedText")
-            if translated:
-                return translated
-        except Exception as exc:
-            return f"Translation failed: {exc}"
+        last_error: Optional[str] = None
+        for endpoint in self.endpoints:
+            try:
+                response = requests.post(endpoint, json=payload, timeout=10)
+                if response.status_code >= 400:
+                    last_error = self._describe_error(endpoint, response)
+                    continue
+                translated = response.json().get("translatedText")
+                if translated:
+                    return translated
+                last_error = f"{endpoint} returned an empty translation."
+            except Exception as exc:
+                last_error = f"{endpoint} failed: {exc}"
+                continue
+        if last_error:
+            return f"Translation failed. {last_error}"
         return "Translation failed."
+
+    def _describe_error(self, endpoint: str, response: requests.Response) -> str:
+        detail = ""
+        try:
+            payload = response.json()
+            if isinstance(payload, dict):
+                detail = payload.get("error") or payload.get("message") or ""
+        except Exception:
+            detail = ""
+        if not detail:
+            detail = response.text.strip()[:200]
+        if detail:
+            return f"{endpoint} responded {response.status_code}: {detail}"
+        return f"{endpoint} responded {response.status_code}."
 
 
 class Vision:
