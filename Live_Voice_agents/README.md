@@ -73,6 +73,8 @@ Notes:
 - Uses your active desktop screen directly (no screenshot uploads).
 - Uses microphone input. For offline speech, set `VOSK_MODEL_PATH`.
 - If no Vosk model is set, it falls back to Google Web Speech (no API key).
+- Use the "Start Camera" button to preview and ensure the camera is visible.
+- If the preview is blank, try another camera index (0, 1, 2).
 
 ## Web App (Streamlit)
 
@@ -118,3 +120,6 @@ set `LIBRETRANSLATE_ENDPOINTS` to a list of working endpoints, for example:
 ```
 LIBRETRANSLATE_ENDPOINTS=https://translate.argosopentech.com/translate,https://translate.astian.org/translate
 ```
+
+If LibreTranslate endpoints are blocked, the app falls back to MyMemory
+(public, no API key).
