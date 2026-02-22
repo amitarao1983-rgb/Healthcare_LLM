@@ -22,6 +22,7 @@ DEFAULT_TRANSLATE_FALLBACKS = [
     "https://translate.argosopentech.com/translate",
     "https://translate.astian.org/translate",
 ]
+DEFAULT_MYMEMORY_ENDPOINT = "https://api.mymemory.translated.net/get"
 
 
 def normalize_whitespace(text: str) -> str:
@@ -326,8 +327,17 @@ class Translator:
             except Exception as exc:
                 last_error = f"{endpoint} failed: {exc}"
                 continue
+        fallback_translation, fallback_error = self._translate_via_mymemory(
+            text, target_code
+        )
+        if fallback_translation:
+            return fallback_translation
+        if last_error and fallback_error:
+            return f"Translation failed. {last_error} {fallback_error}"
         if last_error:
             return f"Translation failed. {last_error}"
+        if fallback_error:
+            return f"Translation failed. {fallback_error}"
         return "Translation failed."
 
     def _describe_error(self, endpoint: str, response: requests.Response) -> str:
@@ -343,6 +353,27 @@ class Translator:
         if detail:
             return f"{endpoint} responded {response.status_code}: {detail}"
         return f"{endpoint} responded {response.status_code}."
+
+    def _translate_via_mymemory(
+        self, text: str, target_code: str
+    ) -> Tuple[Optional[str], Optional[str]]:
+        params = {
+            "q": text,
+            "langpair": f"en|{target_code}",
+        }
+        try:
+            response = requests.get(DEFAULT_MYMEMORY_ENDPOINT, params=params, timeout=10)
+            if response.status_code >= 400:
+                return None, f"MyMemory responded {response.status_code}."
+            payload = response.json()
+            translated = (
+                payload.get("responseData", {}) if isinstance(payload, dict) else {}
+            ).get("translatedText")
+            if translated:
+                return translated, None
+            return None, "MyMemory returned an empty translation."
+        except Exception as exc:
+            return None, f"MyMemory failed: {exc}"
 
 
 class Vision:
