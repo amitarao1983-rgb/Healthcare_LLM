@@ -109,6 +109,12 @@ Deploy on Streamlit Community Cloud:
 LibreTranslate public endpoint is used by default:
 
 - `LIBRETRANSLATE_ENDPOINT` (default: `https://libretranslate.de/translate`)
+- `LIBRETRANSLATE_ENDPOINTS` (optional comma-separated list)
 - `LIBRETRANSLATE_API_KEY` (optional)
 
-No API key is required to run the default setup.
+No API key is required to run the default setup. If a public endpoint is down,
+set `LIBRETRANSLATE_ENDPOINTS` to a list of working endpoints, for example:
+
+```
+LIBRETRANSLATE_ENDPOINTS=https://translate.argosopentech.com/translate,https://translate.astian.org/translate
+```
